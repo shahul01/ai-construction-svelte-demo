@@ -1,7 +1,7 @@
 <script lang="ts">
 	import {
 		Calendar1,
-		// AlertTriangle,
+		TriangleAlert,
 		DollarSign,
 		Wrench,
 		FileText,
@@ -296,17 +296,17 @@
 	<!-- Navigation -->
 	<nav class="bg-white shadow-sm">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-			<div class="flex space-x-8">
+			<div class="flex overflow-x-auto scrollbar-hide sm:space-x-8">
 				{#each navigationTabs as tab}
 					<button
 						onclick={() => (activeTab = tab.id)}
-						class="flex items-center border-b-2 px-3 py-4 text-sm font-medium transition-colors {activeTab ===
+						class="cursor-pointer flex items-center border-b-2 px-2 py-4 text-xs font-medium transition-colors whitespace-nowrap sm:px-3 sm:text-sm {activeTab ===
 						tab.id
 							? 'border-blue-500 text-blue-600'
 							: 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}"
 					>
-						<svelte:component this={tab.icon} class="h-4 w-4" />
-						<span class="ml-2">{tab.label}</span>
+						<tab.icon class="h-4 w-4 flex-shrink-0" />
+						<span class="ml-1 sm:ml-2">{tab.label}</span>
 					</button>
 				{/each}
 			</div>
@@ -389,7 +389,7 @@
 					<!-- Recent Safety Alerts -->
 					<div class="rounded-lg bg-white p-6 shadow-md">
 						<h3 class="mb-4 flex items-center text-lg font-semibold">
-							<!-- <AlertTriangle class="w-5 h-5 mr-2 text-red-600" /> -->
+							<TriangleAlert class="w-5 h-5 mr-2 text-red-600" />
 							Recent Safety Alerts
 						</h3>
 						<div class="space-y-3">
@@ -563,7 +563,7 @@
 
 				<div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
 					<MetricCard title="Issues Detected" value={qualityIssues.length}>
-						<Camera class="w-6 h-6" />
+						<TriangleAlert class="w-6 h-6" />
 					</MetricCard>
 					<MetricCard
 						title="Critical Issues"
@@ -638,7 +638,7 @@
 
 				<div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
 					<MetricCard title="Total Equipment" value={equipment.length}>
-						<Wrench class="w-6 h-6" />
+						<TriangleAlert class="w-6 h-6" />
 					</MetricCard>
 					<MetricCard
 						title="Operational"
