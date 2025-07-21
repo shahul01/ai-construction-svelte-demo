@@ -7,7 +7,6 @@
 		Camera,
 		Brain,
 		TrendingUp,
-		Users,
 		Shield,
 		Building
 	} from '@lucide/svelte';
@@ -18,6 +17,7 @@
 	import Safety from '$lib/features/home/safety/Safety.svelte';
 	import Quality from '$lib/features/home/quality/Quality.svelte';
 	import Equipment from '$lib/features/home/equipment/Equipment.svelte';
+	import AIAnalytics from '$lib/features/home/analytics/AIAnalytics.svelte';
 	import {
 		projects,
 		projectAnalytics,
@@ -26,25 +26,12 @@
 	} from '$lib/stores/projects';
 	import { safetyAlerts, safetyAnalytics } from '$lib/stores/safety';
 	import { qualityAnalytics } from '$lib/stores/quality';
-	import { equipment, equipmentAnalytics, predictMaintenanceNeeds } from '$lib/stores/equipment';
+
+	import { aiAnalytics } from '$lib/stores/analytics';
 
 
 	// State using Svelte runes
 	let activeTab = $state<string>('dashboard');
-
-	// Derived state using Svelte runes
-	const aiAnalytics = $derived(() => {
-		return {
-			...($projectAnalytics || {
-				totalBudget: 0,
-				totalSpent: 0,
-				avgProgress: 0,
-				budgetVariance: 0
-			}),
-			criticalAlerts: $safetyAnalytics.criticalAlerts,
-			equipmentEfficiency: $equipmentAnalytics.avgEfficiency
-		};
-	});
 
 	const navigationTabs = [
 		{ id: 'dashboard', label: 'Dashboard', icon: Building },
@@ -111,29 +98,29 @@
 				<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
 					<MetricCard
 						title="Total Budget"
-						value="${(aiAnalytics().totalBudget / 1_000_000).toFixed(1)}M"
+						value="${($aiAnalytics.totalBudget / 1_000_000).toFixed(1)}M"
 						trend={2.5}
 					>
 						<DollarSign class="h-6 w-6" />
 					</MetricCard>
 					<MetricCard
 						title="Avg Progress"
-						value="{aiAnalytics().avgProgress.toFixed(0)}%"
-						trend={aiAnalytics().avgProgress > 60 ? 5.2 : -2.1}
+						value="{$aiAnalytics.avgProgress.toFixed(0)}%"
+						trend={$aiAnalytics.avgProgress > 60 ? 5.2 : -2.1}
 					>
 						<TrendingUp class="h-6 w-6" />
 					</MetricCard>
 					<MetricCard
 						title="Critical Alerts"
-						value={aiAnalytics().criticalAlerts}
-						className={aiAnalytics().criticalAlerts > 0 ? 'border-red-200 bg-red-50' : ''}
+						value={$aiAnalytics.criticalAlerts}
+						className={$aiAnalytics.criticalAlerts > 0 ? 'border-red-200 bg-red-50' : ''}
 					>
 						<TrendingUp class="h-6 w-6" />
 					</MetricCard>
 					<MetricCard
 						title="Equipment Efficiency"
-						value="{aiAnalytics().equipmentEfficiency.toFixed(0)}%"
-						trend={aiAnalytics().equipmentEfficiency > 85 ? 3.1 : -1.5}
+						value="{$aiAnalytics.equipmentEfficiency.toFixed(0)}%"
+						trend={$aiAnalytics.equipmentEfficiency > 85 ? 3.1 : -1.5}
 					>
 						<Wrench class="h-6 w-6" />
 					</MetricCard>
@@ -209,245 +196,7 @@
 		{:else if activeTab === 'equipment'}
 			<Equipment />
 		{:else if activeTab === 'analytics'}
-			<div class="space-y-6">
-				<div class="flex items-center justify-between">
-					<h2 class="text-2xl font-bold">AI Analytics Dashboard</h2>
-					<div class="text-sm text-gray-600">Advanced predictive modeling active</div>
-				</div>
-
-				<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-					<!-- Project Performance Analysis -->
-					<div class="rounded-lg bg-white p-6 shadow-md">
-						<h3 class="mb-4 flex items-center text-lg font-semibold">
-							<TrendingUp class="mr-2 h-5 w-5 text-green-600" />
-							Project Performance Insights
-						</h3>
-						<div class="space-y-4">
-							{#each $projects as project}
-								{@const delayRisk = predictProjectDelay(project)}
-								{@const budgetOptimization = calculateBudgetOptimization(project)}
-								<div class="rounded-lg border p-4">
-									<div class="mb-2 flex items-center justify-between">
-										<h4 class="font-medium">{project.name}</h4>
-										<div
-											class="rounded px-2 py-1 text-sm {delayRisk > 30
-												? 'bg-red-100 text-red-800'
-												: delayRisk > 15
-													? 'bg-yellow-100 text-yellow-800'
-													: 'bg-green-100 text-green-800'}"
-										>
-											{delayRisk}% delay risk
-										</div>
-									</div>
-									<div class="grid grid-cols-2 gap-4 text-sm">
-										<div>
-											<span class="text-gray-600">Completion Prediction:</span>
-											<div class="font-medium">
-												{new Date(
-													new Date(project.endDate).getTime() +
-														(delayRisk > 20 ? 30 * 24 * 60 * 60 * 1000 : 0)
-												).toLocaleDateString()}
-											</div>
-										</div>
-										<div>
-											<span class="text-gray-600">Budget Optimization:</span>
-											<div
-												class="font-medium {budgetOptimization >= 0
-													? 'text-green-600'
-													: 'text-red-600'}"
-											>
-												{budgetOptimization >= 0 ? '+' : ''}${(budgetOptimization / 1000).toFixed(
-													0
-												)}K
-											</div>
-										</div>
-									</div>
-								</div>
-							{/each}
-						</div>
-					</div>
-
-					<!-- Resource Utilization -->
-					<div class="rounded-lg bg-white p-6 shadow-md">
-						<h3 class="mb-4 flex items-center text-lg font-semibold">
-							<Users class="mr-2 h-5 w-5 text-blue-600" />
-							Resource Utilization Analysis
-						</h3>
-						<div class="space-y-4">
-							<div class="flex items-center justify-between">
-								<span class="text-gray-600">Equipment Efficiency</span>
-								<span class="text-2xl font-bold"
-									>{aiAnalytics().equipmentEfficiency.toFixed(1)}%</span
-								>
-							</div>
-							<ProgressBar progress={aiAnalytics().equipmentEfficiency} />
-
-							<div class="flex items-center justify-between">
-								<span class="text-gray-600">Budget Utilization</span>
-								<span class="text-2xl font-bold"
-									>{((aiAnalytics().totalSpent / aiAnalytics().totalBudget) * 100).toFixed(
-										1
-									)}%</span
-								>
-							</div>
-							<ProgressBar
-								progress={(aiAnalytics().totalSpent / aiAnalytics().totalBudget) * 100}
-							/>
-
-							<div class="flex items-center justify-between">
-								<span class="text-gray-600">Overall Progress</span>
-								<span class="text-2xl font-bold">{aiAnalytics().avgProgress.toFixed(1)}%</span>
-							</div>
-							<ProgressBar progress={aiAnalytics().avgProgress} />
-						</div>
-					</div>
-
-					<!-- Predictive Maintenance Schedule -->
-					<div class="rounded-lg bg-white p-6 shadow-md">
-						<h3 class="mb-4 flex items-center text-lg font-semibold">
-							<Wrench class="mr-2 h-5 w-5 text-orange-600" />
-							Predictive Maintenance Schedule
-						</h3>
-						<div class="space-y-3">
-							{#each $equipment as eq}
-								<div class="flex items-center justify-between rounded-lg border p-3">
-									<div>
-										<div class="font-medium">{eq.name}</div>
-										<div class="text-sm text-gray-600">{predictMaintenanceNeeds(eq)}</div>
-									</div>
-									<div class="text-right">
-										<div class="text-sm text-gray-600">Health</div>
-										<div
-											class="font-bold {eq.health > 85
-												? 'text-green-600'
-												: eq.health > 70
-													? 'text-yellow-600'
-													: 'text-red-600'}"
-										>
-											{eq.health}%
-										</div>
-									</div>
-								</div>
-							{/each}
-						</div>
-					</div>
-
-					<!-- Safety Risk Assessment -->
-					<div class="rounded-lg bg-white p-6 shadow-md">
-						<h3 class="mb-4 flex items-center text-lg font-semibold">
-							<Shield class="mr-2 h-5 w-5 text-red-600" />
-							Safety Risk Assessment
-						</h3>
-						<div class="space-y-4">
-							<div class="grid grid-cols-2 gap-4">
-								<div class="rounded-lg bg-red-50 p-4 text-center">
-									<div class="text-2xl font-bold text-red-600">
-										{$safetyAnalytics.criticalAlerts}
-									</div>
-									<div class="text-sm text-red-800">Critical Alerts</div>
-								</div>
-								<div class="rounded-lg bg-yellow-50 p-4 text-center">
-									<div class="text-2xl font-bold text-yellow-600">
-										{$safetyAnalytics.highAlerts}
-									</div>
-									<div class="text-sm text-yellow-800">High Priority</div>
-								</div>
-							</div>
-							<div class="text-sm text-gray-600">
-								<div class="mb-1 flex justify-between">
-									<span>Safety Score</span>
-									<span class="font-medium">{$safetyAnalytics.safetyScore}%</span>
-								</div>
-								<ProgressBar progress={$safetyAnalytics.safetyScore} />
-							</div>
-						</div>
-					</div>
-
-					<!-- Quality Control Metrics -->
-					<div class="rounded-lg bg-white p-6 shadow-md">
-						<h3 class="mb-4 flex items-center text-lg font-semibold">
-							<Camera class="mr-2 h-5 w-5 text-purple-600" />
-							Quality Control Metrics
-						</h3>
-						<div class="space-y-4">
-							<div class="grid grid-cols-2 gap-4">
-								<div class="rounded-lg bg-purple-50 p-4 text-center">
-									<div class="text-2xl font-bold text-purple-600">
-										{$qualityAnalytics.criticalIssues}
-									</div>
-									<div class="text-sm text-purple-800">Critical Issues</div>
-								</div>
-								<div class="rounded-lg bg-green-50 p-4 text-center">
-									<div class="text-2xl font-bold text-green-600">
-										{$qualityAnalytics.qualityScore.toFixed(0)}%
-									</div>
-									<div class="text-sm text-green-800">Quality Score</div>
-								</div>
-							</div>
-							<div class="text-sm text-gray-600">
-								<div class="mb-1 flex justify-between">
-									<span>Compliance Score</span>
-									<span class="font-medium">{$qualityAnalytics.complianceScore.toFixed(0)}%</span>
-								</div>
-								<ProgressBar progress={$qualityAnalytics.complianceScore} />
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- AI Recommendations -->
-				<div class="rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 p-6 shadow-md">
-					<h3 class="mb-4 flex items-center text-lg font-semibold">
-						<Brain class="mr-2 h-5 w-5 text-purple-600" />
-						AI Recommendations
-					</h3>
-					<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-						<div class="rounded-lg bg-white p-4">
-							<h4 class="mb-2 font-medium text-blue-900">💡 Schedule Optimization</h4>
-							<p class="text-sm text-gray-700">
-								Consider reallocating resources from Highway Bridge Extension to Residential Tower A
-								to reduce delay risk by 15%.
-							</p>
-						</div>
-						<div class="rounded-lg bg-white p-4">
-							<h4 class="mb-2 font-medium text-green-900">💰 Cost Savings</h4>
-							<p class="text-sm text-gray-700">
-								Implement predictive maintenance on Excavator CAT-320 to avoid potential $45K in
-								downtime costs.
-							</p>
-						</div>
-						<div class="rounded-lg bg-white p-4">
-							<h4 class="mb-2 font-medium text-red-900">⚠️ Safety Priority</h4>
-							<p class="text-sm text-gray-700">
-								Address critical scaffolding issue immediately. Predicted incident probability: 78%
-								within 24 hours.
-							</p>
-						</div>
-						<div class="rounded-lg bg-white p-4">
-							<h4 class="mb-2 font-medium text-purple-900">🔍 Quality Focus</h4>
-							<p class="text-sm text-gray-700">
-								Review structural issues in Column C-12. AI confidence: {$qualityAnalytics.avgConfidence.toFixed(
-									0
-								)}%. Immediate inspection recommended.
-							</p>
-						</div>
-						<div class="rounded-lg bg-white p-4">
-							<h4 class="mb-2 font-medium text-orange-900">🔧 Equipment Alert</h4>
-							<p class="text-sm text-gray-700">
-								Equipment efficiency at {aiAnalytics().equipmentEfficiency.toFixed(0)}%. Schedule
-								maintenance for optimal performance.
-							</p>
-						</div>
-						<div class="rounded-lg bg-white p-4">
-							<h4 class="mb-2 font-medium text-indigo-900">📊 Performance Insight</h4>
-							<p class="text-sm text-gray-700">
-								Overall project progress: {aiAnalytics().avgProgress.toFixed(0)}%. Quality
-								compliance at {$qualityAnalytics.complianceScore.toFixed(0)}%.
-							</p>
-						</div>
-					</div>
-				</div>
-			</div>
+			<AIAnalytics />
 		{/if}
 	</main>
 
