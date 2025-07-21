@@ -4,42 +4,29 @@
 		TriangleAlert,
 		DollarSign,
 		Wrench,
-		FileText,
 		Camera,
 		Brain,
 		TrendingUp,
 		Users,
 		Shield,
-		Building,
+		Building
 	} from '@lucide/svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import ProgressBar from '$lib/components/ProgressBar.svelte';
 	import MetricCard from '$lib/components/MetricCard.svelte';
 	import Projects from '$lib/features/home/projects/Projects.svelte';
-	import { projects, projectAnalytics, predictProjectDelay, calculateBudgetOptimization } from '$lib/stores/projects';
 	import Safety from '$lib/features/home/safety/Safety.svelte';
+	import Quality from '$lib/features/home/quality/Quality.svelte';
+	import {
+		projects,
+		projectAnalytics,
+		predictProjectDelay,
+		calculateBudgetOptimization
+	} from '$lib/stores/projects';
+	import { safetyAlerts, safetyAnalytics } from '$lib/stores/safety';
+	import { qualityAnalytics } from '$lib/stores/quality';
 
-	// Types
-	interface SafetyAlert {
-		id: string;
-		type: 'ppe' | 'hazard' | 'equipment' | 'behavior';
-		severity: 'low' | 'medium' | 'high' | 'critical';
-		location: string;
-		timestamp: string;
-		description: string;
-		resolved: boolean;
-	}
-
-	interface QualityIssue {
-		id: string;
-		type: 'structural' | 'material' | 'alignment' | 'surface';
-		severity: 'minor' | 'major' | 'critical';
-		location: string;
-		detected: string;
-		confidence: number;
-		status: 'open' | 'reviewing' | 'fixed';
-	}
-
+	// Types (SafetyAlert and QualityIssue interfaces are now in their respective stores)
 	interface Equipment {
 		id: string;
 		name: string;
@@ -52,71 +39,9 @@
 
 	// State using Svelte runes
 	let activeTab = $state<string>('dashboard');
-	let safetyAlerts = $state<SafetyAlert[]>([]);
-	let qualityIssues = $state<QualityIssue[]>([]);
 	let equipment = $state<Equipment[]>([]);
 
-	// Mock data generators
-	const generateMockSafetyAlerts = (): SafetyAlert[] => [
-		{
-			id: 'SA001',
-			type: 'ppe',
-			severity: 'high',
-			location: 'Floor 15, Zone A',
-			timestamp: '2025-06-27T08:30:00Z',
-			description: 'Worker without hard hat detected',
-			resolved: false
-		},
-		{
-			id: 'SA002',
-			type: 'hazard',
-			severity: 'critical',
-			location: 'Ground Level, East Side',
-			timestamp: '2025-06-27T10:15:00Z',
-			description: 'Unstable scaffolding detected',
-			resolved: false
-		},
-		{
-			id: 'SA003',
-			type: 'equipment',
-			severity: 'medium',
-			location: 'Crane Operation Zone',
-			timestamp: '2025-06-27T07:45:00Z',
-			description: 'Equipment operating outside safe parameters',
-			resolved: true
-		}
-	];
-
-	const generateMockQualityIssues = (): QualityIssue[] => [
-		{
-			id: 'QI001',
-			type: 'structural',
-			severity: 'major',
-			location: 'Column C-12, Floor 8',
-			detected: '2025-06-27T09:20:00Z',
-			confidence: 94,
-			status: 'open'
-		},
-		{
-			id: 'QI002',
-			type: 'alignment',
-			severity: 'minor',
-			location: 'Wall Section W-45',
-			detected: '2025-06-27T11:30:00Z',
-			confidence: 87,
-			status: 'reviewing'
-		},
-		{
-			id: 'QI003',
-			type: 'material',
-			severity: 'critical',
-			location: 'Foundation Block F-8',
-			detected: '2025-06-26T16:45:00Z',
-			confidence: 98,
-			status: 'fixed'
-		}
-	];
-
+	// Mock data generators (Safety and Quality generators are now in their respective stores)
 	const generateMockEquipment = (): Equipment[] => [
 		{
 			id: 'EQ001',
@@ -156,15 +81,17 @@
 
 	// Derived state using Svelte runes
 	const aiAnalytics = $derived(() => {
-		const criticalAlerts = safetyAlerts.filter(
-			(a) => a.severity === 'critical' && !a.resolved
-		).length;
 		const equipmentEfficiency =
 			equipment.reduce((sum, e) => sum + e.efficiency, 0) / equipment.length || 0;
 
 		return {
-			...($projectAnalytics || { totalBudget: 0, totalSpent: 0, avgProgress: 0, budgetVariance: 0 }),
-			criticalAlerts,
+			...($projectAnalytics || {
+				totalBudget: 0,
+				totalSpent: 0,
+				avgProgress: 0,
+				budgetVariance: 0
+			}),
+			criticalAlerts: $safetyAnalytics.criticalAlerts,
 			equipmentEfficiency
 		};
 	});
@@ -178,21 +105,8 @@
 		{ id: 'analytics', label: 'AI Analytics', icon: Brain }
 	];
 
-	// Functions
-	const resolveAlert = (alertId: string) => {
-		safetyAlerts = safetyAlerts.map((a) => (a.id === alertId ? { ...a, resolved: true } : a));
-	};
-
-	const reviewQualityIssue = (issueId: string) => {
-		qualityIssues = qualityIssues.map((q) =>
-			q.id === issueId ? { ...q, status: 'reviewing' } : q
-		);
-	};
-
-	// Initialize data
+	// Initialize data (Safety and Quality data are now handled by their respective stores)
 	$effect(() => {
-		safetyAlerts = generateMockSafetyAlerts();
-		qualityIssues = generateMockQualityIssues();
 		equipment = generateMockEquipment();
 	});
 
@@ -325,7 +239,7 @@
 							Recent Safety Alerts
 						</h3>
 						<div class="space-y-3">
-							{#each safetyAlerts.slice(0, 5) as alert}
+							{#each $safetyAlerts.slice(0, 5) as alert}
 								<div class="rounded-lg border p-3">
 									<div class="mb-1 flex items-start justify-between">
 										<span class="text-sm font-medium">{alert.description}</span>
@@ -345,82 +259,8 @@
 			<Projects />
 		{:else if activeTab === 'safety'}
 			<Safety />
-
 		{:else if activeTab === 'quality'}
-			<div class="space-y-6">
-				<div class="flex items-center justify-between">
-					<h2 class="text-2xl font-bold">AI Quality Control</h2>
-					<div class="text-sm text-gray-600">Computer vision analysis active</div>
-				</div>
-
-				<div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
-					<MetricCard title="Issues Detected" value={qualityIssues.length}>
-						<TriangleAlert class="h-6 w-6" />
-					</MetricCard>
-					<MetricCard
-						title="Critical Issues"
-						value={qualityIssues.filter((q) => q.severity === 'critical').length}
-						className="border-red-200"
-					>
-						<Shield class="h-6 w-6" />
-					</MetricCard>
-					<MetricCard
-						title="Avg Confidence"
-						value="{(
-							qualityIssues.reduce((sum, q) => sum + q.confidence, 0) / qualityIssues.length
-						).toFixed(0)}%"
-					>
-						<Brain class="h-6 w-6" />
-					</MetricCard>
-					<MetricCard
-						title="Fixed Issues"
-						value={qualityIssues.filter((q) => q.status === 'fixed').length}
-					>
-						<FileText class="h-6 w-6" />
-					</MetricCard>
-				</div>
-
-				<div class="rounded-lg bg-white shadow-md">
-					<div class="border-b p-6">
-						<h3 class="text-lg font-semibold">Quality Issues</h3>
-					</div>
-					<div class="divide-y">
-						{#each qualityIssues as issue}
-							<div class="p-6">
-								<div class="mb-3 flex items-start justify-between">
-									<div class="flex-1">
-										<div class="mb-2 flex items-center space-x-3">
-											<StatusBadge status={issue.severity} variant="quality" />
-											<span class="text-sm font-medium text-gray-900"
-												>{issue.type.toUpperCase()}</span
-											>
-											<span class="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800"
-												>{issue.confidence}% confidence</span
-											>
-										</div>
-										<h4 class="mb-1 font-medium text-gray-900">{issue.type} issue detected</h4>
-										<div class="text-sm text-gray-600">
-											<div>📍 {issue.location}</div>
-											<div>🕒 {new Date(issue.detected).toLocaleString()}</div>
-										</div>
-									</div>
-									<div class="flex flex-col space-y-2">
-										<StatusBadge status={issue.status} />
-										{#if issue.status === 'open'}
-											<button
-												onclick={() => reviewQualityIssue(issue.id)}
-												class="rounded bg-blue-600 px-3 py-1 text-sm text-white transition-colors hover:bg-blue-700"
-											>
-												Review
-											</button>
-										{/if}
-									</div>
-								</div>
-							</div>
-						{/each}
-					</div>
-				</div>
-			</div>
+			<Quality />
 		{:else if activeTab === 'equipment'}
 			<div class="space-y-6">
 				<div class="flex items-center justify-between">
@@ -633,30 +473,55 @@
 							<div class="grid grid-cols-2 gap-4">
 								<div class="rounded-lg bg-red-50 p-4 text-center">
 									<div class="text-2xl font-bold text-red-600">
-										{safetyAlerts.filter((a) => a.severity === 'critical' && !a.resolved).length}
+										{$safetyAnalytics.criticalAlerts}
 									</div>
 									<div class="text-sm text-red-800">Critical Alerts</div>
 								</div>
 								<div class="rounded-lg bg-yellow-50 p-4 text-center">
 									<div class="text-2xl font-bold text-yellow-600">
-										{safetyAlerts.filter((a) => a.severity === 'high' && !a.resolved).length}
+										{$safetyAnalytics.highAlerts}
 									</div>
 									<div class="text-sm text-yellow-800">High Priority</div>
 								</div>
 							</div>
-							{#if true}
-								{@const safetyScore = Math.max(
-									0,
-									100 - safetyAlerts.filter((a) => !a.resolved).length * 15
-								)}
-								<div class="text-sm text-gray-600">
-									<div class="mb-1 flex justify-between">
-										<span>Safety Score</span>
-										<span class="font-medium">{safetyScore}%</span>
-									</div>
-									<ProgressBar progress={safetyScore} />
+							<div class="text-sm text-gray-600">
+								<div class="mb-1 flex justify-between">
+									<span>Safety Score</span>
+									<span class="font-medium">{$safetyAnalytics.safetyScore}%</span>
 								</div>
-							{/if}
+								<ProgressBar progress={$safetyAnalytics.safetyScore} />
+							</div>
+						</div>
+					</div>
+
+					<!-- Quality Control Metrics -->
+					<div class="rounded-lg bg-white p-6 shadow-md">
+						<h3 class="mb-4 flex items-center text-lg font-semibold">
+							<Camera class="mr-2 h-5 w-5 text-purple-600" />
+							Quality Control Metrics
+						</h3>
+						<div class="space-y-4">
+							<div class="grid grid-cols-2 gap-4">
+								<div class="rounded-lg bg-purple-50 p-4 text-center">
+									<div class="text-2xl font-bold text-purple-600">
+										{$qualityAnalytics.criticalIssues}
+									</div>
+									<div class="text-sm text-purple-800">Critical Issues</div>
+								</div>
+								<div class="rounded-lg bg-green-50 p-4 text-center">
+									<div class="text-2xl font-bold text-green-600">
+										{$qualityAnalytics.qualityScore.toFixed(0)}%
+									</div>
+									<div class="text-sm text-green-800">Quality Score</div>
+								</div>
+							</div>
+							<div class="text-sm text-gray-600">
+								<div class="mb-1 flex justify-between">
+									<span>Compliance Score</span>
+									<span class="font-medium">{$qualityAnalytics.complianceScore.toFixed(0)}%</span>
+								</div>
+								<ProgressBar progress={$qualityAnalytics.complianceScore} />
+							</div>
 						</div>
 					</div>
 				</div>
@@ -687,6 +552,28 @@
 							<p class="text-sm text-gray-700">
 								Address critical scaffolding issue immediately. Predicted incident probability: 78%
 								within 24 hours.
+							</p>
+						</div>
+						<div class="rounded-lg bg-white p-4">
+							<h4 class="mb-2 font-medium text-purple-900">🔍 Quality Focus</h4>
+							<p class="text-sm text-gray-700">
+								Review structural issues in Column C-12. AI confidence: {$qualityAnalytics.avgConfidence.toFixed(
+									0
+								)}%. Immediate inspection recommended.
+							</p>
+						</div>
+						<div class="rounded-lg bg-white p-4">
+							<h4 class="mb-2 font-medium text-orange-900">🔧 Equipment Alert</h4>
+							<p class="text-sm text-gray-700">
+								Equipment efficiency at {aiAnalytics().equipmentEfficiency.toFixed(0)}%. Schedule
+								maintenance for optimal performance.
+							</p>
+						</div>
+						<div class="rounded-lg bg-white p-4">
+							<h4 class="mb-2 font-medium text-indigo-900">📊 Performance Insight</h4>
+							<p class="text-sm text-gray-700">
+								Overall project progress: {aiAnalytics().avgProgress.toFixed(0)}%. Quality
+								compliance at {$qualityAnalytics.complianceScore.toFixed(0)}%.
 							</p>
 						</div>
 					</div>
