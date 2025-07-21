@@ -30,16 +30,6 @@
 		riskLevel: 'low' | 'medium' | 'high';
 	}
 
-	interface Equipment {
-		id: string;
-		name: string;
-		status: 'operational' | 'maintenance' | 'down';
-		health: number;
-		lastMaintenance: string;
-		nextMaintenance: string;
-		efficiency: number;
-	}
-
 	interface SafetyAlert {
 		id: string;
 		type: 'ppe' | 'hazard' | 'equipment' | 'behavior';
@@ -60,12 +50,22 @@
 		status: 'open' | 'reviewing' | 'fixed';
 	}
 
+	interface Equipment {
+		id: string;
+		name: string;
+		status: 'operational' | 'maintenance' | 'down';
+		health: number;
+		lastMaintenance: string;
+		nextMaintenance: string;
+		efficiency: number;
+	}
+
 	// State using Svelte runes
 	let activeTab = $state<string>('dashboard');
 	let projects = $state<Project[]>([]);
-	let equipment = $state<Equipment[]>([]);
 	let safetyAlerts = $state<SafetyAlert[]>([]);
 	let qualityIssues = $state<QualityIssue[]>([]);
+	let equipment = $state<Equipment[]>([]);
 
 	// Mock data generators
 	const generateMockProjects = (): Project[] => [
@@ -101,36 +101,6 @@
 			startDate: '2023-09-01',
 			endDate: '2025-03-15',
 			riskLevel: 'low'
-		}
-	];
-
-	const generateMockEquipment = (): Equipment[] => [
-		{
-			id: 'EQ001',
-			name: 'Tower Crane TC-1',
-			status: 'operational',
-			health: 87,
-			lastMaintenance: '2025-06-15',
-			nextMaintenance: '2025-07-15',
-			efficiency: 92
-		},
-		{
-			id: 'EQ002',
-			name: 'Excavator CAT-320',
-			status: 'maintenance',
-			health: 65,
-			lastMaintenance: '2025-06-20',
-			nextMaintenance: '2025-06-28',
-			efficiency: 78
-		},
-		{
-			id: 'EQ003',
-			name: 'Concrete Mixer CM-500',
-			status: 'operational',
-			health: 94,
-			lastMaintenance: '2025-06-10',
-			nextMaintenance: '2025-07-10',
-			efficiency: 96
 		}
 	];
 
@@ -191,6 +161,36 @@
 			detected: '2025-06-26T16:45:00Z',
 			confidence: 98,
 			status: 'fixed'
+		}
+	];
+
+	const generateMockEquipment = (): Equipment[] => [
+		{
+			id: 'EQ001',
+			name: 'Tower Crane TC-1',
+			status: 'operational',
+			health: 87,
+			lastMaintenance: '2025-06-15',
+			nextMaintenance: '2025-07-15',
+			efficiency: 92
+		},
+		{
+			id: 'EQ002',
+			name: 'Excavator CAT-320',
+			status: 'maintenance',
+			health: 65,
+			lastMaintenance: '2025-06-20',
+			nextMaintenance: '2025-06-28',
+			efficiency: 78
+		},
+		{
+			id: 'EQ003',
+			name: 'Concrete Mixer CM-500',
+			status: 'operational',
+			health: 94,
+			lastMaintenance: '2025-06-10',
+			nextMaintenance: '2025-07-10',
+			efficiency: 96
 		}
 	];
 
@@ -259,9 +259,9 @@
 	// Initialize data
 	$effect(() => {
 		projects = generateMockProjects();
-		equipment = generateMockEquipment();
 		safetyAlerts = generateMockSafetyAlerts();
 		qualityIssues = generateMockQualityIssues();
+		equipment = generateMockEquipment();
 	});
 
 	const currentDate = new Date();
@@ -296,11 +296,11 @@
 	<!-- Navigation -->
 	<nav class="bg-white shadow-sm">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-			<div class="flex overflow-x-auto scrollbar-hide sm:space-x-8">
+			<div class="scrollbar-hide flex overflow-x-auto sm:space-x-8">
 				{#each navigationTabs as tab}
 					<button
 						onclick={() => (activeTab = tab.id)}
-						class="cursor-pointer flex items-center border-b-2 px-2 py-4 text-xs font-medium transition-colors whitespace-nowrap sm:px-3 sm:text-sm {activeTab ===
+						class="flex cursor-pointer items-center border-b-2 px-2 py-4 text-xs font-medium whitespace-nowrap transition-colors sm:px-3 sm:text-sm {activeTab ===
 						tab.id
 							? 'border-blue-500 text-blue-600'
 							: 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}"
@@ -323,28 +323,28 @@
 						value="${(aiAnalytics().totalBudget / 1_000_000).toFixed(1)}M"
 						trend={2.5}
 					>
-						<DollarSign class="w-6 h-6" />
+						<DollarSign class="h-6 w-6" />
 					</MetricCard>
 					<MetricCard
 						title="Avg Progress"
 						value="{aiAnalytics().avgProgress.toFixed(0)}%"
 						trend={aiAnalytics().avgProgress > 60 ? 5.2 : -2.1}
 					>
-						<TrendingUp class="w-6 h-6" />
+						<TrendingUp class="h-6 w-6" />
 					</MetricCard>
 					<MetricCard
 						title="Critical Alerts"
 						value={aiAnalytics().criticalAlerts}
 						className={aiAnalytics().criticalAlerts > 0 ? 'border-red-200 bg-red-50' : ''}
 					>
-						<TrendingUp class="w-6 h-6" />
+						<TrendingUp class="h-6 w-6" />
 					</MetricCard>
 					<MetricCard
 						title="Equipment Efficiency"
 						value="{aiAnalytics().equipmentEfficiency.toFixed(0)}%"
 						trend={aiAnalytics().equipmentEfficiency > 85 ? 3.1 : -1.5}
 					>
-						<Wrench class="w-6 h-6" />
+						<Wrench class="h-6 w-6" />
 					</MetricCard>
 				</div>
 
@@ -389,7 +389,7 @@
 					<!-- Recent Safety Alerts -->
 					<div class="rounded-lg bg-white p-6 shadow-md">
 						<h3 class="mb-4 flex items-center text-lg font-semibold">
-							<TriangleAlert class="w-5 h-5 mr-2 text-red-600" />
+							<TriangleAlert class="mr-2 h-5 w-5 text-red-600" />
 							Recent Safety Alerts
 						</h3>
 						<div class="space-y-3">
@@ -494,23 +494,20 @@
 
 				<div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
 					<MetricCard title="Total Alerts" value={safetyAlerts.length}>
-						<Shield class="w-6 h-6" />
+						<Shield class="h-6 w-6" />
 					</MetricCard>
 					<MetricCard
 						title="Critical"
 						value={safetyAlerts.filter((a) => a.severity === 'critical').length}
 						className="border-red-200"
 					>
-						<Shield class="w-6 h-6" />
+						<Shield class="h-6 w-6" />
 					</MetricCard>
-					<MetricCard
-						title="Resolved Today"
-						value={safetyAlerts.filter((a) => a.resolved).length}
-					>
-						<Shield class="w-6 h-6" />
+					<MetricCard title="Resolved Today" value={safetyAlerts.filter((a) => a.resolved).length}>
+						<Shield class="h-6 w-6" />
 					</MetricCard>
 					<MetricCard title="Response Time" value="4.2 min" trend={-15.3}>
-						<Clock class="w-6 h-6" />
+						<Clock class="h-6 w-6" />
 					</MetricCard>
 				</div>
 
@@ -563,14 +560,14 @@
 
 				<div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
 					<MetricCard title="Issues Detected" value={qualityIssues.length}>
-						<TriangleAlert class="w-6 h-6" />
+						<TriangleAlert class="h-6 w-6" />
 					</MetricCard>
 					<MetricCard
 						title="Critical Issues"
 						value={qualityIssues.filter((q) => q.severity === 'critical').length}
 						className="border-red-200"
 					>
-						<Shield class="w-6 h-6" />
+						<Shield class="h-6 w-6" />
 					</MetricCard>
 					<MetricCard
 						title="Avg Confidence"
@@ -578,13 +575,13 @@
 							qualityIssues.reduce((sum, q) => sum + q.confidence, 0) / qualityIssues.length
 						).toFixed(0)}%"
 					>
-						<Brain class="w-6 h-6" />
+						<Brain class="h-6 w-6" />
 					</MetricCard>
 					<MetricCard
 						title="Fixed Issues"
 						value={qualityIssues.filter((q) => q.status === 'fixed').length}
 					>
-						<FileText class="w-6 h-6" />
+						<FileText class="h-6 w-6" />
 					</MetricCard>
 				</div>
 
@@ -638,28 +635,28 @@
 
 				<div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
 					<MetricCard title="Total Equipment" value={equipment.length}>
-						<TriangleAlert class="w-6 h-6" />
+						<TriangleAlert class="h-6 w-6" />
 					</MetricCard>
 					<MetricCard
 						title="Operational"
 						value={equipment.filter((e) => e.status === 'operational').length}
 						className="border-green-200"
 					>
-						<Wrench class="w-6 h-6" />
+						<Wrench class="h-6 w-6" />
 					</MetricCard>
 					<MetricCard
 						title="In Maintenance"
 						value={equipment.filter((e) => e.status === 'maintenance').length}
 						className="border-yellow-200"
 					>
-						<Shield class="w-6 h-6" />
+						<Shield class="h-6 w-6" />
 					</MetricCard>
 					<MetricCard
 						title="Avg Efficiency"
 						value="{aiAnalytics().equipmentEfficiency.toFixed(0)}%"
 						trend={2.8}
 					>
-						<TrendingUp class="w-6 h-6" />
+						<TrendingUp class="h-6 w-6" />
 					</MetricCard>
 				</div>
 
