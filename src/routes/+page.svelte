@@ -16,20 +16,10 @@
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import ProgressBar from '$lib/components/ProgressBar.svelte';
 	import MetricCard from '$lib/components/MetricCard.svelte';
+	import Projects from '$lib/features/home/projects/Projects.svelte';
+	import { projects, projectAnalytics, predictProjectDelay, calculateBudgetOptimization } from '$lib/stores/projects';
 
 	// Types
-	interface Project {
-		id: string;
-		name: string;
-		status: 'planning' | 'active' | 'delayed' | 'completed';
-		progress: number;
-		budget: number;
-		spent: number;
-		startDate: string;
-		endDate: string;
-		riskLevel: 'low' | 'medium' | 'high';
-	}
-
 	interface SafetyAlert {
 		id: string;
 		type: 'ppe' | 'hazard' | 'equipment' | 'behavior';
@@ -62,48 +52,11 @@
 
 	// State using Svelte runes
 	let activeTab = $state<string>('dashboard');
-	let projects = $state<Project[]>([]);
 	let safetyAlerts = $state<SafetyAlert[]>([]);
 	let qualityIssues = $state<QualityIssue[]>([]);
 	let equipment = $state<Equipment[]>([]);
 
 	// Mock data generators
-	const generateMockProjects = (): Project[] => [
-		{
-			id: '1',
-			name: 'Downtown Office Complex',
-			status: 'active',
-			progress: 67,
-			budget: 12_500_000,
-			spent: 8_375_000,
-			startDate: '2024-01-15',
-			endDate: '2025-08-30',
-			riskLevel: 'medium'
-		},
-		{
-			id: '2',
-			name: 'Residential Tower A',
-			status: 'delayed',
-			progress: 45,
-			budget: 8_200_000,
-			spent: 4_100_000,
-			startDate: '2024-03-01',
-			endDate: '2025-12-15',
-			riskLevel: 'high'
-		},
-		{
-			id: '3',
-			name: 'Highway Bridge Extension',
-			status: 'active',
-			progress: 89,
-			budget: 5_600_000,
-			spent: 4_984_000,
-			startDate: '2023-09-01',
-			endDate: '2025-03-15',
-			riskLevel: 'low'
-		}
-	];
-
 	const generateMockSafetyAlerts = (): SafetyAlert[] => [
 		{
 			id: 'SA001',
@@ -195,20 +148,6 @@
 	];
 
 	// AI Simulation Functions
-	const predictProjectDelay = (project: Project): number => {
-		const factors = [
-			project.riskLevel === 'high' ? 0.3 : project.riskLevel === 'medium' ? 0.15 : 0.05,
-			project.progress < 50 ? 0.2 : 0.1,
-			project.spent / project.budget > 0.8 ? 0.25 : 0.1
-		];
-		return Math.round(factors.reduce((a, b) => a + b, 0) * 100);
-	};
-
-	const calculateBudgetOptimization = (project: Project): number => {
-		const efficiency = project.progress / (project.spent / project.budget);
-		return Math.round((efficiency - 1) * project.budget);
-	};
-
 	const predictMaintenanceNeeds = (eq: Equipment): string => {
 		if (eq.health < 70) return 'Immediate maintenance required';
 		if (eq.health < 85) return 'Schedule maintenance within 1 week';
@@ -217,9 +156,6 @@
 
 	// Derived state using Svelte runes
 	const aiAnalytics = $derived(() => {
-		const totalBudget = projects.reduce((sum, p) => sum + p.budget, 0);
-		const totalSpent = projects.reduce((sum, p) => sum + p.spent, 0);
-		const avgProgress = projects.reduce((sum, p) => sum + p.progress, 0) / projects.length || 0;
 		const criticalAlerts = safetyAlerts.filter(
 			(a) => a.severity === 'critical' && !a.resolved
 		).length;
@@ -227,12 +163,9 @@
 			equipment.reduce((sum, e) => sum + e.efficiency, 0) / equipment.length || 0;
 
 		return {
-			totalBudget,
-			totalSpent,
-			avgProgress,
+			...($projectAnalytics || { totalBudget: 0, totalSpent: 0, avgProgress: 0, budgetVariance: 0 }),
 			criticalAlerts,
-			equipmentEfficiency,
-			budgetVariance: totalBudget > 0 ? (totalSpent / totalBudget - 1) * 100 : 0
+			equipmentEfficiency
 		};
 	});
 
@@ -258,7 +191,6 @@
 
 	// Initialize data
 	$effect(() => {
-		projects = generateMockProjects();
 		safetyAlerts = generateMockSafetyAlerts();
 		qualityIssues = generateMockQualityIssues();
 		equipment = generateMockEquipment();
@@ -356,7 +288,7 @@
 							Active Projects
 						</h3>
 						<div class="space-y-4">
-							{#each projects.filter((p) => p.status === 'active' || p.status === 'delayed') as project}
+							{#each $projects.filter((p) => p.status === 'active' || p.status === 'delayed') as project}
 								<div class="rounded-lg border p-4">
 									<div class="mb-2 flex items-start justify-between">
 										<h4 class="font-medium">{project.name}</h4>
@@ -410,78 +342,7 @@
 				</div>
 			</div>
 		{:else if activeTab === 'projects'}
-			<div class="space-y-6">
-				<div class="flex items-center justify-between">
-					<h2 class="text-2xl font-bold">AI Project Management</h2>
-					<div class="text-sm text-gray-600">Predictive analytics enabled</div>
-				</div>
-
-				<div class="grid gap-6">
-					{#each projects as project}
-						{@const delayProbability = predictProjectDelay(project)}
-						{@const budgetOptimization = calculateBudgetOptimization(project)}
-						<div class="rounded-lg bg-white p-6 shadow-md">
-							<div class="mb-4 flex items-start justify-between">
-								<div>
-									<h3 class="text-xl font-semibold">{project.name}</h3>
-									<p class="text-gray-600">
-										{new Date(project.startDate).toLocaleDateString()} - {new Date(
-											project.endDate
-										).toLocaleDateString()}
-									</p>
-								</div>
-								<div class="flex space-x-2">
-									<StatusBadge status={project.status} />
-									<StatusBadge status={project.riskLevel} variant="safety" />
-								</div>
-							</div>
-
-							<div class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-								<div>
-									<div class="mb-1 flex justify-between text-sm text-gray-600">
-										<span>Progress</span>
-										<span>{project.progress}%</span>
-									</div>
-									<ProgressBar progress={project.progress} />
-								</div>
-								<div>
-									<div class="mb-1 flex justify-between text-sm text-gray-600">
-										<span>Budget Usage</span>
-										<span>{((project.spent / project.budget) * 100).toFixed(1)}%</span>
-									</div>
-									<ProgressBar progress={(project.spent / project.budget) * 100} />
-								</div>
-								<div>
-									<div class="mb-1 flex justify-between text-sm text-gray-600">
-										<span>Delay Risk</span>
-										<span>{delayProbability}%</span>
-									</div>
-									<ProgressBar progress={delayProbability} />
-								</div>
-							</div>
-
-							<div class="rounded-lg bg-blue-50 p-4">
-								<h4 class="mb-2 font-medium text-blue-900">🤖 AI Predictions</h4>
-								<div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-									<div>
-										<span class="font-medium text-blue-800">Delay Probability:</span>
-										<span class="ml-2 {delayProbability > 20 ? 'text-red-600' : 'text-green-600'}">
-											{delayProbability}% chance of delay
-										</span>
-									</div>
-									<div>
-										<span class="font-medium text-blue-800">Budget Optimization:</span>
-										<span class="ml-2 {budgetOptimization < 0 ? 'text-red-600' : 'text-green-600'}">
-											{budgetOptimization >= 0 ? '+' : ''}${(budgetOptimization / 1000).toFixed(0)}K
-											potential savings
-										</span>
-									</div>
-								</div>
-							</div>
-						</div>
-					{/each}
-				</div>
-			</div>
+			<Projects />
 		{:else if activeTab === 'safety'}
 			<div class="space-y-6">
 				<div class="flex items-center justify-between">
@@ -719,7 +580,7 @@
 							Project Performance Insights
 						</h3>
 						<div class="space-y-4">
-							{#each projects as project}
+							{#each $projects as project}
 								{@const delayRisk = predictProjectDelay(project)}
 								{@const budgetOptimization = calculateBudgetOptimization(project)}
 								<div class="rounded-lg border p-4">
