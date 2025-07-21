@@ -17,6 +17,7 @@
 	import Projects from '$lib/features/home/projects/Projects.svelte';
 	import Safety from '$lib/features/home/safety/Safety.svelte';
 	import Quality from '$lib/features/home/quality/Quality.svelte';
+	import Equipment from '$lib/features/home/equipment/Equipment.svelte';
 	import {
 		projects,
 		projectAnalytics,
@@ -25,65 +26,14 @@
 	} from '$lib/stores/projects';
 	import { safetyAlerts, safetyAnalytics } from '$lib/stores/safety';
 	import { qualityAnalytics } from '$lib/stores/quality';
+	import { equipment, equipmentAnalytics, predictMaintenanceNeeds } from '$lib/stores/equipment';
 
-	// Types (SafetyAlert and QualityIssue interfaces are now in their respective stores)
-	interface Equipment {
-		id: string;
-		name: string;
-		status: 'operational' | 'maintenance' | 'down';
-		health: number;
-		lastMaintenance: string;
-		nextMaintenance: string;
-		efficiency: number;
-	}
 
 	// State using Svelte runes
 	let activeTab = $state<string>('dashboard');
-	let equipment = $state<Equipment[]>([]);
-
-	// Mock data generators (Safety and Quality generators are now in their respective stores)
-	const generateMockEquipment = (): Equipment[] => [
-		{
-			id: 'EQ001',
-			name: 'Tower Crane TC-1',
-			status: 'operational',
-			health: 87,
-			lastMaintenance: '2025-06-15',
-			nextMaintenance: '2025-07-15',
-			efficiency: 92
-		},
-		{
-			id: 'EQ002',
-			name: 'Excavator CAT-320',
-			status: 'maintenance',
-			health: 65,
-			lastMaintenance: '2025-06-20',
-			nextMaintenance: '2025-06-28',
-			efficiency: 78
-		},
-		{
-			id: 'EQ003',
-			name: 'Concrete Mixer CM-500',
-			status: 'operational',
-			health: 94,
-			lastMaintenance: '2025-06-10',
-			nextMaintenance: '2025-07-10',
-			efficiency: 96
-		}
-	];
-
-	// AI Simulation Functions
-	const predictMaintenanceNeeds = (eq: Equipment): string => {
-		if (eq.health < 70) return 'Immediate maintenance required';
-		if (eq.health < 85) return 'Schedule maintenance within 1 week';
-		return 'Equipment running optimally';
-	};
 
 	// Derived state using Svelte runes
 	const aiAnalytics = $derived(() => {
-		const equipmentEfficiency =
-			equipment.reduce((sum, e) => sum + e.efficiency, 0) / equipment.length || 0;
-
 		return {
 			...($projectAnalytics || {
 				totalBudget: 0,
@@ -92,7 +42,7 @@
 				budgetVariance: 0
 			}),
 			criticalAlerts: $safetyAnalytics.criticalAlerts,
-			equipmentEfficiency
+			equipmentEfficiency: $equipmentAnalytics.avgEfficiency
 		};
 	});
 
@@ -104,11 +54,6 @@
 		{ id: 'equipment', label: 'Equipment', icon: Wrench },
 		{ id: 'analytics', label: 'AI Analytics', icon: Brain }
 	];
-
-	// Initialize data (Safety and Quality data are now handled by their respective stores)
-	$effect(() => {
-		equipment = generateMockEquipment();
-	});
 
 	const currentDate = new Date();
 </script>
@@ -262,83 +207,7 @@
 		{:else if activeTab === 'quality'}
 			<Quality />
 		{:else if activeTab === 'equipment'}
-			<div class="space-y-6">
-				<div class="flex items-center justify-between">
-					<h2 class="text-2xl font-bold">Equipment Fleet Management</h2>
-					<div class="text-sm text-gray-600">Predictive maintenance enabled</div>
-				</div>
-
-				<div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
-					<MetricCard title="Total Equipment" value={equipment.length}>
-						<TriangleAlert class="h-6 w-6" />
-					</MetricCard>
-					<MetricCard
-						title="Operational"
-						value={equipment.filter((e) => e.status === 'operational').length}
-						className="border-green-200"
-					>
-						<Wrench class="h-6 w-6" />
-					</MetricCard>
-					<MetricCard
-						title="In Maintenance"
-						value={equipment.filter((e) => e.status === 'maintenance').length}
-						className="border-yellow-200"
-					>
-						<Shield class="h-6 w-6" />
-					</MetricCard>
-					<MetricCard
-						title="Avg Efficiency"
-						value="{aiAnalytics().equipmentEfficiency.toFixed(0)}%"
-						trend={2.8}
-					>
-						<TrendingUp class="h-6 w-6" />
-					</MetricCard>
-				</div>
-
-				<div class="grid gap-6">
-					{#each equipment as eq}
-						{@const prediction = predictMaintenanceNeeds(eq)}
-						<div class="rounded-lg bg-white p-6 shadow-md">
-							<div class="mb-4 flex items-start justify-between">
-								<div>
-									<h3 class="text-xl font-semibold">{eq.name}</h3>
-									<p class="text-gray-600">ID: {eq.id}</p>
-								</div>
-								<StatusBadge status={eq.status} variant="equipment" />
-							</div>
-
-							<div class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-								<div>
-									<div class="mb-1 flex justify-between text-sm text-gray-600">
-										<span>Health Score</span>
-										<span>{eq.health}%</span>
-									</div>
-									<ProgressBar progress={eq.health} />
-								</div>
-								<div>
-									<div class="mb-1 flex justify-between text-sm text-gray-600">
-										<span>Efficiency</span>
-										<span>{eq.efficiency}%</span>
-									</div>
-									<ProgressBar progress={eq.efficiency} />
-								</div>
-								<div class="text-sm">
-									<div class="mb-1 text-gray-600">Next Maintenance</div>
-									<div class="font-medium">{new Date(eq.nextMaintenance).toLocaleDateString()}</div>
-								</div>
-							</div>
-
-							<div class="rounded-lg bg-purple-50 p-4">
-								<h4 class="mb-2 font-medium text-purple-900">🤖 AI Maintenance Prediction</h4>
-								<p class="text-sm text-purple-800">{prediction}</p>
-								<div class="mt-2 text-xs text-purple-700">
-									Last maintenance: {new Date(eq.lastMaintenance).toLocaleDateString()}
-								</div>
-							</div>
-						</div>
-					{/each}
-				</div>
-			</div>
+			<Equipment />
 		{:else if activeTab === 'analytics'}
 			<div class="space-y-6">
 				<div class="flex items-center justify-between">
@@ -440,7 +309,7 @@
 							Predictive Maintenance Schedule
 						</h3>
 						<div class="space-y-3">
-							{#each equipment as eq}
+							{#each $equipment as eq}
 								<div class="flex items-center justify-between rounded-lg border p-3">
 									<div>
 										<div class="font-medium">{eq.name}</div>
